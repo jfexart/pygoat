@@ -13,10 +13,7 @@ phases:
       
       # Install pre-commit for validation checks in the pre_build phase
       - pip install pre-commit
-      
-      # Install curl, as it might not be included in the base image
-      - yum install -y curl || apt-get update && apt-get install -y curl
-      
+
   pre_build:
     commands:
       - echo "Running pre-commit hooks as a validation step in CI..."

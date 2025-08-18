@@ -32,12 +32,13 @@ phases:
     commands:
       - echo "Continuing with main security scans if pre-commit passed..."
 
-      # --- 1. Análisis Estático (SAST) con Bandit ---
+      # --- 1. Análisis Estático (SAST) con Bandit (Docker) ---
       - echo "Running SAST with Bandit..."
       # Genera un reporte en JSON. El '|| true' es para que el comando no falle el build
       # si encuentra vulnerabilidades, permitiendo que el reporte se suba a DefectDojo.
       # Si se quiere que el build falle aquí si Bandit encuentra algo, se debe quitar el '|| true'.
-      - bandit -r . -f json -o ${REPORT_DIR}/bandit-report.json || true
+      - echo "Ejecutando SAST con Bandit via Docker..."
+      - docker run --rm -v "$(pwd)":/src ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
 
 
       # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check (Docker) ---
@@ -47,6 +48,7 @@ phases:
           --project "${PROJECT_NAME}" \
           --format JUNIT \
           --out /src/${REPORT_DIR}/dependency-check-report.xml
+          --nvdApiKey ${NIST_API_KEY}
           
   post_build:
     commands:

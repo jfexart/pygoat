@@ -38,12 +38,22 @@ phases:
       - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
       
       # --- 2. Software Composition Analysis (SCA) with OWASP Dependency-Check (Docker) ---
-      # Runs OWASP Dependency-Check to scan the updated requirements.txt file.
       - echo "Running SCA with OWASP Dependency-Check via Docker..."
+      # Verify the requirements.txt file exists before scanning.
+      - |
+        if [ ! -f "requirements.txt" ]; then
+          echo "ERROR: requirements.txt not found. Exiting."
+          exit 1
+        fi
+      
       - docker pull owasp/dependency-check
-      # Usando una sola linea para evitar errores de sintaxis YAML
-      # Añadiendo un comando de depuración para listar el contenido del directorio /src en el contenedor
-      - docker run --rm -v "$(pwd)":/src:z owasp/dependency-check bash -c "echo 'Contents of /src in container:'; ls -la /src; /usr/share/dependency-check/bin/run.sh --scan /src/requirements.txt --project '${PROJECT_NAME}' --format JUNIT --out /src/${REPORT_DIR}/dependency-check-report.xml --nvdApiKey ${NIST_API_KEY}"
+      - |
+        docker run --rm -v "$(pwd)":/src:z owasp/dependency-check \
+          --scan /src/requirements.txt \
+          --project "${PROJECT_NAME}" \
+          --format JUNIT \
+          --out /src/${REPORT_DIR}/dependency-check-report.xml \
+          --nvdApiKey ${NIST_API_KEY}
           
   post_build:
     commands:

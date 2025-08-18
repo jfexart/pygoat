@@ -10,9 +10,10 @@ phases:
     commands:
       - echo "Installing dependencies and security tools..."
       - mkdir -p ${REPORT_DIR}
+      - ls
       
       # Install pre-commit for validation checks in the pre_build phase
-      - pip install pre-commit
+      # - pip install pre-commit
 
   pre_build:
     commands:

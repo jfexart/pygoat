@@ -15,6 +15,9 @@ phases:
       # Install pre-commit for validation checks in the pre_build phase
       # - pip install pre-commit
 
+      # Installs pipreqs to update requirements.txt
+      - pip install pipreqs
+
   pre_build:
     commands:
       - echo "Running pre-commit hooks as a validation step in CI..."
@@ -22,6 +25,10 @@ phases:
 
   build:
     commands:
+      - echo "Updating requirements.txt to ensure all dependencies are scanned..."
+      # Generates or updates requirements.txt from the source code
+      - pipreqs --force 
+      
       - echo "Continuing with main security scans if pre-commit passed..."
       
       # --- 1. Análisis Estático (SAST) con Bandit (Docker) ---

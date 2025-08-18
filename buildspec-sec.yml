@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    PROJECT_NAME: "lineascreditos"
+    PROJECT_NAME: "pygoat"
     REPORT_DIR: "security-reports"
 
 phases:
@@ -51,16 +51,15 @@ phases:
       # Si se quiere que el build falle aquí si Bandit encuentra algo, se debe quitar el '|| true'.
       - bandit -r . -f json -o ${REPORT_DIR}/bandit-report.json || true
 
-      # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check ---
-      - echo "Running SCA with OWASP Dependency-Check..."
-      - |
-        dependency-check.sh \
-          --project "${PROJECT_NAME}" \
-          --scan . \
-          --format JUNIT \
-          --out ${REPORT_DIR}/dependency-check-report.xml \
-          --data /opt/dependency-check/data
 
+      # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check (Docker) ---
+      - echo "Running SCA with OWASP Dependency-Check via Docker..."
+      - docker pull owasp/dependency-check # Opcional, pero asegura que tienes la última versión
+      - docker run --rm -v "$(pwd)":/src:z owasp/dependency-check --scan /src \
+          --project "${PROJECT_NAME}" \
+          --format JUNIT \
+          --out /src/${REPORT_DIR}/dependency-check-report.xml
+          
   post_build:
     commands:
       - echo "Uploading security scan results to DefectDojo..."

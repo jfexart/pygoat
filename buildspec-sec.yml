@@ -37,7 +37,7 @@ phases:
           docker run --rm -v "$(pwd)":/src:z owasp/dependency-check 
           --scan /src --project "${PROJECT_NAME}" --format JUNIT 
           --out /src/${REPORT_DIR}/dependency-check-report.xml 
-          --nvdApiKey "${NIST_API_KEY}"
+          --nvdApiKey ${NIST_API_KEY}
           
   post_build:
     commands:

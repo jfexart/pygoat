@@ -35,7 +35,8 @@ phases:
       # La imagen ghcr.io/pycqa/bandit/bandit incluye la herramienta y sus dependencias.
       - echo "Ejecutando SAST con Bandit via Docker..."
       - >
-          docker run --rm -v "$(pwd)":/src ghcr.io/pycqa/bandit/bandit 
+          docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit bash -c
+          "mkdir -p /src/${REPORT_DIR} && 
           -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
       
       # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check (Docker) ---

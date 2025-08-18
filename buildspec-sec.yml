@@ -10,51 +10,42 @@ phases:
     commands:
       - echo "Installing dependencies and security tools..."
       - mkdir -p ${REPORT_DIR}
-
-      # Instala pre-commit
-      #- pip install pre-commit
-
-      # Instala Bandit (SAST para Python)
-      - pip install bandit
-
-      # Instala librería para interactuar con la API de DefectDojo
-      - pip install requests
-
+      
+      # Install pre-commit for validation checks in the pre_build phase
+      - pip install pre-commit
+      
+      # Install curl, as it might not be included in the base image
+      - yum install -y curl || apt-get update && apt-get install -y curl
+      
   pre_build:
     commands:
-      # - echo "Running pre-commit hooks as a validation step in CI..."
-      # Ejecuta todos los hooks definidos en tu .pre-commit-config.yaml
-      # Si algún hook falla, 'pre-commit run' saldrá con un código de error no-cero,
-      # lo que hará que esta fase de CodeBuild falle y detenga el pipeline.
-      #- pre-commit run --all-files
+      - echo "Running pre-commit hooks as a validation step in CI..."
+      - pre-commit run --all-files
 
   build:
     commands:
       - echo "Continuing with main security scans if pre-commit passed..."
-
-      # --- 1. Análisis Estático (SAST) con Bandit (Docker) ---
-      - echo "Running SAST with Bandit..."
-      # Genera un reporte en JSON. El '|| true' es para que el comando no falle el build
-      # si encuentra vulnerabilidades, permitiendo que el reporte se suba a DefectDojo.
-      # Si se quiere que el build falle aquí si Bandit encuentra algo, se debe quitar el '|| true'.
-      - echo "Ejecutando SAST con Bandit via Docker..."
-      - docker run --rm -v "$(pwd)":/src ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
-
-
-      # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check (Docker) ---
+      
+      # --- 1. Static Analysis (SAST) with Bandit (Docker) ---
+      - echo "Running SAST with Bandit via Docker..."
+      - >
+          docker run --rm -v "$(pwd)":/src ghcr.io/pycqa/bandit/bandit 
+          -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
+      
+      # --- 2. Software Composition Analysis (SCA) with OWASP Dependency-Check (Docker) ---
       - echo "Running SCA with OWASP Dependency-Check via Docker..."
-      - docker pull owasp/dependency-check # Opcional, pero asegura que tienes la última versión
-      - docker run --rm -v "$(pwd)":/src:z owasp/dependency-check --scan /src \
-          --project "${PROJECT_NAME}" \
-          --format JUNIT \
-          --out /src/${REPORT_DIR}/dependency-check-report.xml
+      - docker pull owasp/dependency-check
+      - >
+          docker run --rm -v "$(pwd)":/src:z owasp/dependency-check 
+          --scan /src --project "${PROJECT_NAME}" --format JUNIT 
+          --out /src/${REPORT_DIR}/dependency-check-report.xml 
           --nvdApiKey ${NIST_API_KEY}
           
   post_build:
     commands:
       - echo "Uploading security scan results to DefectDojo with curl..."
-
-      # Sube reporte de Bandit con curl
+      
+      # Upload Bandit report with curl
       - |
         if [ -f "${REPORT_DIR}/bandit-report.json" ]; then
           curl --location --request POST "$DEFECTDOJO_HOST/api/v2/import-scan/" \
@@ -69,8 +60,8 @@ phases:
           --form "branch=$CODEBUILD_WEBHOOK_HEAD_REF" \
           --form "file=@${REPORT_DIR}/bandit-report.json"
         fi
-
-      # Sube reporte de OWASP Dependency-Check con curl
+      
+      # Upload OWASP Dependency-Check report with curl
       - |
         if [ -f "${REPORT_DIR}/dependency-check-report.xml" ]; then
           curl --location --request POST "$DEFECTDOJO_HOST/api/v2/import-scan/" \

@@ -24,15 +24,16 @@ phases:
     commands:
       - echo "Continuing with main security scans if pre-commit passed..."
       
-      # --- 1. Static Analysis (SAST) with Bandit (Docker) ---
-      - echo "Running SAST with Bandit via Docker..."
+      # --- 1. Análisis Estático (SAST) con Bandit (Docker) ---
+      # La imagen ghcr.io/pycqa/bandit/bandit incluye la herramienta y sus dependencias.
+      - echo "Ejecutando SAST con Bandit via Docker..."
       - >
           docker run --rm -v "$(pwd)":/src ghcr.io/pycqa/bandit/bandit 
           -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
       
-      # --- 2. Software Composition Analysis (SCA) with OWASP Dependency-Check (Docker) ---
+      # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check (Docker) ---
+      # La imagen owasp/dependency-check incluye la herramienta y su motor.
       - echo "Running SCA with OWASP Dependency-Check via Docker..."
-      - echo "NIST API Key ${NIST_API_KEY}"
       - docker pull owasp/dependency-check
       - >
           docker run --rm -v "$(pwd)":/src:z owasp/dependency-check 

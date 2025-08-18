@@ -37,11 +37,17 @@ phases:
       # Usando una sola linea para evitar errores de sintaxis YAML
       - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
       
-       # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check (Docker) ---
+       # --- 2. Software Composition Analysis (SCA) with OWASP Dependency-Check (Docker) ---
+      # Runs OWASP Dependency-Check as a root user to solve permission issues.
       - echo "Running SCA with OWASP Dependency-Check via Docker..."
       - docker pull owasp/dependency-check
-      # Aquí está la corrección: el comando está en una sola línea, sin bash -c, y la ruta de salida es correcta.
-      - docker run --rm -v "$(pwd)":/src:z owasp/dependency-check --scan /src/requirements.txt --project "${PROJECT_NAME}" --format JUNIT --out /src/${REPORT_DIR}/dependency-check-report.xml --nvdApiKey ${NIST_API_KEY}
+      - >
+          docker run --rm -u root -v "$(pwd)":/src:z owasp/dependency-check 
+          --scan /src/requirements.txt 
+          --project "${PROJECT_NAME}" 
+          --format JUNIT 
+          --out /src/${REPORT_DIR}/dependency-check-report.xml 
+          --nvdApiKey ${NIST_API_KEY}
           
   post_build:
     commands:

@@ -1,0 +1,95 @@
+env:
+  variables:
+    PROJECT_NAME: "lineascreditos"
+    REPORT_DIR: "security-reports"
+
+phases:
+  install:
+    commands:
+      - echo "Installing dependencies and security tools..."
+      - mkdir -p ${REPORT_DIR}
+
+      # Instala pre-commit
+      #- pip install pre-commit
+
+      # Instala OWASP Dependency-Check CLI
+      - |
+        if [ ! -d "/opt/dependency-check" ]; then
+          DC_VERSION="9.0.9" # Usa la última versión estable
+          wget "https://github.com/jeremylong/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" -P /tmp/
+          unzip /tmp/dependency-check-${DC_VERSION}-release.zip -d /opt/
+          export PATH=$PATH:/opt/dependency-check/bin
+          echo "Dependency-Check installed."
+        else
+          echo "Dependency-Check already installed."
+        fi
+
+      # Instala Bandit (SAST para Python)
+      - pip install bandit
+
+      # Instala librería para interactuar con la API de DefectDojo
+      - pip install requests
+
+  pre_build:
+    commands:
+      # - echo "Running pre-commit hooks as a validation step in CI..."
+      # Ejecuta todos los hooks definidos en tu .pre-commit-config.yaml
+      # Si algún hook falla, 'pre-commit run' saldrá con un código de error no-cero,
+      # lo que hará que esta fase de CodeBuild falle y detenga el pipeline.
+      #- pre-commit run --all-files
+
+  build:
+    commands:
+      - echo "Continuing with main security scans if pre-commit passed..."
+
+      # --- 1. Análisis Estático (SAST) con Bandit ---
+      - echo "Running SAST with Bandit..."
+      # Genera un reporte en JSON. El '|| true' es para que el comando no falle el build
+      # si encuentra vulnerabilidades, permitiendo que el reporte se suba a DefectDojo.
+      # Si se quiere que el build falle aquí si Bandit encuentra algo, se debe quitar el '|| true'.
+      - bandit -r . -f json -o ${REPORT_DIR}/bandit-report.json || true
+
+      # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check ---
+      - echo "Running SCA with OWASP Dependency-Check..."
+      - |
+        dependency-check.sh \
+          --project "${PROJECT_NAME}" \
+          --scan . \
+          --format JUNIT \
+          --out ${REPORT_DIR}/dependency-check-report.xml \
+          --data /opt/dependency-check/data
+
+  post_build:
+    commands:
+      - echo "Uploading security scan results to DefectDojo..."
+
+      # Sube reporte de Bandit
+      - |
+        if [ -f "${REPORT_DIR}/bandit-report.json" ]; then
+          python scripts/upload_to_defectdojo.py \
+            --host "$DEFECTDOJO_HOST" \
+            --api-key "$DEFECTDOJO_API_KEY" \
+            --engagement-id "$DEFECTDOJO_ENGAGEMENT_ID" \
+            --scanner "Bandit" \
+            --file "${REPORT_DIR}/bandit-report.json" \
+            --title "Bandit SAST Scan - $CODEBUILD_RESOLVED_SOURCE_VERSION" \
+            --branch "$CODEBUILD_WEBHOOK_HEAD_REF"
+        fi
+
+      # Sube reporte de OWASP Dependency-Check
+      - |
+        if [ -f "${REPORT_DIR}/dependency-check-report.xml" ]; then
+          python scripts/upload_to_defectdojo.py \
+            --host "$DEFECTDOJO_HOST" \
+            --api-key "$DEFECTDOJO_API_KEY" \
+            --engagement-id "$DEFECTDOJO_ENGAGEMENT_ID" \
+            --scanner "OWASP Dependency-Check" \
+            --file "${REPORT_DIR}/dependency-check-report.xml" \
+            --title "Dependency Check SCA Scan - $CODEBUILD_RESOLVED_SOURCE_VERSION" \
+            --branch "$CODEBUILD_WEBHOOK_HEAD_REF"
+        fi
+
+artifacts:
+  files:
+    - '${REPORT_DIR}/**/*'
+  discard-paths: no

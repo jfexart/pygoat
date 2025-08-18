@@ -14,18 +14,6 @@ phases:
       # Instala pre-commit
       #- pip install pre-commit
 
-      # Instala OWASP Dependency-Check CLI
-      - |
-        if [ ! -d "/opt/dependency-check" ]; then
-          DC_VERSION="9.0.9" # Usa la última versión estable
-          wget "https://github.com/jeremylong/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" -P /tmp/
-          unzip /tmp/dependency-check-${DC_VERSION}-release.zip -d /opt/
-          export PATH=$PATH:/opt/dependency-check/bin
-          echo "Dependency-Check installed."
-        else
-          echo "Dependency-Check already installed."
-        fi
-
       # Instala Bandit (SAST para Python)
       - pip install bandit
 

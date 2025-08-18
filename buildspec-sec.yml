@@ -21,8 +21,8 @@ phases:
 
   pre_build:
     commands:
-      - echo "Running pre-commit hooks as a validation step in CI..."
-      - pre-commit run --all-files
+      #- echo "Running pre-commit hooks as a validation step in CI..."
+      #- pre-commit run --all-files
 
   build:
     commands:

@@ -8,53 +8,48 @@ env:
 phases:
   install:
     commands:
-      - echo "Installing dependencies and security tools..."
+      - echo "Installing core dependencies..."
       - mkdir -p ${REPORT_DIR}
-      - ls
+      - echo "Current directory contents:"
+      - ls -la
       
-      # Install pre-commit for validation checks in the pre_build phase
-      # - pip install pre-commit
-
+      # Installs pre-commit for validation checks
+      #- pip install pre-commit
+      
       # Installs pipreqs to update requirements.txt
       - pip install pipreqs
 
   pre_build:
     commands:
       - echo "Running pre-commit hooks as a validation step in CI..."
-      #- pre-commit run --all-files
+      - pre-commit run --all-files
 
   build:
     commands:
       - echo "Updating requirements.txt to ensure all dependencies are scanned..."
-      # Generates or updates requirements.txt from the source code
-      - pipreqs --force 
+      - pipreqs --force . 
       
-      - echo "Continuing with main security scans if pre-commit passed..."
+      - echo "Executing security scans..."
       
-      # --- 1. Análisis Estático (SAST) con Bandit (Docker) ---
-      # La imagen ghcr.io/pycqa/bandit/bandit incluye la herramienta y sus dependencias.
-      - echo "Ejecutando SAST con Bandit via Docker..."
-      - >
-          docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit bash -c
-          "mkdir -p /src/${REPORT_DIR} && 
-          -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
+      # --- 1. Static Analysis (SAST) with Bandit (Docker) ---
+      # Runs Bandit directly in a Docker container, mounting the source code.
+      - echo "Running SAST with Bandit via Docker..."
+      # Usando una sola linea para evitar errores de sintaxis YAML
+      - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
       
-      # --- 2. Análisis de Composición de Software (SCA) con OWASP Dependency-Check (Docker) ---
+      # --- 2. Software Composition Analysis (SCA) with OWASP Dependency-Check (Docker) ---
+      # Runs OWASP Dependency-Check to scan the updated requirements.txt file.
       - echo "Running SCA with OWASP Dependency-Check via Docker..."
       - docker pull owasp/dependency-check
-      - >
-          docker run --rm -v "$(pwd)":/src:z owasp/dependency-check bash -c 
-          "mkdir -p /src/${REPORT_DIR} && 
-           /usr/share/dependency-check/bin/run.sh --scan /src \
-           --project '${PROJECT_NAME}' --format JUNIT \
-           --out /src/${REPORT_DIR}/dependency-check-report.xml \
-           --nvdApiKey ${NIST_API_KEY}"
+      # Usando una sola linea para evitar errores de sintaxis YAML
+      # Añadiendo un comando de depuración para listar el contenido del directorio /src en el contenedor
+      - docker run --rm -v "$(pwd)":/src:z owasp/dependency-check bash -c "echo 'Contents of /src in container:'; ls -la /src; /usr/share/dependency-check/bin/run.sh --scan /src/requirements.txt --project '${PROJECT_NAME}' --format JUNIT --out /src/${REPORT_DIR}/dependency-check-report.xml --nvdApiKey ${NIST_API_KEY}"
           
   post_build:
     commands:
       - echo "Uploading security scan results to DefectDojo with curl..."
       
-      # Upload Bandit report with curl
+      # Sube reporte de Bandit con curl si el archivo existe.
       - |
         if [ -f "${REPORT_DIR}/bandit-report.json" ]; then
           curl --location --request POST "$DEFECTDOJO_HOST/api/v2/import-scan/" \
@@ -70,7 +65,7 @@ phases:
           --form "file=@${REPORT_DIR}/bandit-report.json"
         fi
       
-      # Upload OWASP Dependency-Check report with curl
+      # Sube reporte de OWASP Dependency-Check con curl si el archivo existe.
       - |
         if [ -f "${REPORT_DIR}/dependency-check-report.xml" ]; then
           curl --location --request POST "$DEFECTDOJO_HOST/api/v2/import-scan/" \

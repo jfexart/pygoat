@@ -4,42 +4,40 @@ env:
   variables:
     PROJECT_NAME: "pygoat"
     REPORT_DIR: "security-reports"
+    DD_ENGAGEMENT_ID: 0
 
 phases:
   install:
     commands:
-      - echo "Installing core dependencies..."
+      - echo "Setup inicial"
       - mkdir -p ${REPORT_DIR}
-      - echo "Current directory contents:"
-      - ls -la
       
-      # Installs pre-commit for validation checks
+      # Instala pre-commit para chequear validaciones
       #- pip install pre-commit
       
-      # Installs pipreqs to update requirements.txt
+      # Instala pipreqs para actualizar requirements.txt
       - pip install pipreqs
 
   pre_build:
     commands:
-      #- echo "Running pre-commit hooks as a validation step in CI..."
+      - echo "Ejecutando pre-commit como paso de validación en CI"
       #- pre-commit run --all-files
 
   build:
     commands:
-      - echo "Updating requirements.txt to ensure all dependencies are scanned..."
+      - echo "Actualizando requirements.txt para asegurar que todas las dependencias son escaneadas"
       - pipreqs --force . 
       
-      - echo "Executing security scans..."
+      - echo "Ejecutando análsis de seguridad"
       
-      # --- 1. Static Analysis (SAST) with Bandit (Docker) ---
-      # Runs Bandit directly in a Docker container, mounting the source code.
-      - echo "Running SAST with Bandit via Docker..."
+      # --- 1. Static Analysis (SAST) con Bandit (Docker) ---
+      - echo "Ejecutando SAST con Bandit via Docker"
       # Usando una sola linea para evitar errores de sintaxis YAML
       - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
       
-       # --- 2. Software Composition Analysis (SCA) with OWASP Dependency-Check (Docker) ---
-      # Runs OWASP Dependency-Check as a root user to solve permission issues.
-      - echo "Running SCA with OWASP Dependency-Check via Docker..."
+      # --- 2. Software Composition Analysis (SCA) con OWASP Dependency-Check (Docker) ---
+      # Se ejecuta OWASP Dependency-Check como usuario root user para solventar problemas de permisos
+      - echo "Ejecutando SCA con OWASP Dependency-Check via Docker..."
       - docker pull owasp/dependency-check
       - >
           docker run --rm -u root -v "$(pwd)":/src:z owasp/dependency-check 
@@ -52,15 +50,15 @@ phases:
   post_build:
     commands:
       #- echo "Uploading security scan results to DefectDojo with curl..."
-      - echo "Current directory contents:"
+      - echo "Contenido de directorio de reportes:"
       - ls ${REPORT_DIR}
       
       # Sube reporte de Bandit con curl si el archivo existe.
       #- |
       #  if [ -f "${REPORT_DIR}/bandit-report.json" ]; then
-      #    curl --location --request POST "$DEFECTDOJO_HOST/api/v2/import-scan/" \
-      #    --header "Authorization: Token $DEFECTDOJO_API_KEY" \
-      #    --form "engagement=$DEFECTDOJO_ENGAGEMENT_ID" \
+      #    curl --location --request POST "$DD_HOST/api/v2/import-scan/" \
+      #    --header "Authorization: Token $DD_API_KEY" \
+      #    --form "engagement=$DD_ENGAGEMENT_ID" \
       #    --form "scan_type=Bandit" \
       #    --form "active=true" \
       #    --form "verified=false" \
@@ -74,9 +72,9 @@ phases:
       # Sube reporte de OWASP Dependency-Check con curl si el archivo existe.
       #- |
       #  if [ -f "${REPORT_DIR}/dependency-check-report.xml" ]; then
-      #    curl --location --request POST "$DEFECTDOJO_HOST/api/v2/import-scan/" \
-      #    --header "Authorization: Token $DEFECTDOJO_API_KEY" \
-      #    --form "engagement=$DEFECTDOJO_ENGAGEMENT_ID" \
+      #    curl --location --request POST "$DD_HOST/api/v2/import-scan/" \
+      #    --header "Authorization: Token $DD_API_KEY" \
+      #    --form "engagement=$DD_ENGAGEMENT_ID" \
       #    --form "scan_type=Dependency Check" \
       #    --form "active=true" \
       #    --form "verified=false" \

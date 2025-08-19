@@ -59,7 +59,7 @@ phases:
       # Sube reporte de Bandit con curl si el archivo existe.
       - |
         if [ -f "${REPORT_DIR}/bandit-report.json" ]; then
-          echo "Subiendo reporte SAST a DefectDojo: /src/${REPORT_DIR}/${SAST_FILE_REPORT}"
+          echo "Subiendo reporte SAST a DefectDojo= '/src/${REPORT_DIR}/${SAST_FILE_REPORT}'"
       #    curl --location --request POST "$DD_HOST/api/v2/import-scan/" \
       #    --header "Authorization: Token $DD_API_KEY" \
       #    --form "engagement=$DD_ENGAGEMENT_ID" \
@@ -76,7 +76,7 @@ phases:
       # Sube reporte de OWASP Dependency-Check con curl si el archivo existe.
       - |
         if [ -f "${REPORT_DIR}/${SCA_FILE_REPORT}" ]; then
-          echo "Subiendo reporte SCA a DefectDojo: /src/${REPORT_DIR}/${SCA_FILE_REPORT}"
+          echo "Subiendo reporte SCA a DefectDojo: '/src/${REPORT_DIR}/${SCA_FILE_REPORT}'"
       #    curl --location --request POST "$DD_HOST/api/v2/import-scan/" \
       #    --header "Authorization: Token $DD_API_KEY" \
       #    --form "engagement=$DD_ENGAGEMENT_ID" \

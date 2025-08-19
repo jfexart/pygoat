@@ -51,9 +51,10 @@ phases:
           
   post_build:
     commands:
-      #- echo "Uploading security scan results to DefectDojo with curl..."
       - echo "Contenido de directorio de reportes:"
       - ls ${REPORT_DIR}
+
+      - echo "Subiendo resultados de análisis al DefectDojo con curl..."
       
       # Sube reporte de Bandit con curl si el archivo existe.
       - |

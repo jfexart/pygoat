@@ -5,6 +5,8 @@ env:
     PROJECT_NAME: "pygoat"
     REPORT_DIR: "security-reports"
     DD_ENGAGEMENT_ID: 0
+    SAST_FILE_REPORT: "bandit-report.json"
+    SCA_FILE_REPORT: "dependency-check-report.xml"
 
 phases:
   install:
@@ -33,7 +35,7 @@ phases:
       # --- 1. Static Analysis (SAST) con Bandit (Docker) ---
       - echo "Ejecutando SAST con Bandit via Docker"
       # Usando una sola linea para evitar errores de sintaxis YAML
-      - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/bandit-report.json || true
+      - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/${SAST_FILE_REPORT} || true
       
       # --- 2. Software Composition Analysis (SCA) con OWASP Dependency-Check (Docker) ---
       # Se ejecuta OWASP Dependency-Check como usuario root user para solventar problemas de permisos
@@ -44,7 +46,7 @@ phases:
           --scan /src/requirements.txt 
           --project "${PROJECT_NAME}" 
           --format JUNIT 
-          --out /src/${REPORT_DIR}/dependency-check-report.xml 
+          --out /src/${REPORT_DIR}/${SCA_FILE_REPORT} 
           --nvdApiKey ${NIST_API_KEY}
           
   post_build:
@@ -54,36 +56,38 @@ phases:
       - ls ${REPORT_DIR}
       
       # Sube reporte de Bandit con curl si el archivo existe.
-      #- |
-      #  if [ -f "${REPORT_DIR}/bandit-report.json" ]; then
+      - |
+        if [ -f "${REPORT_DIR}/bandit-report.json" ]; then
+        echo "Subiendo reporte SAST a DefectDojo: /src/${REPORT_DIR}/${SAST_FILE_REPORT}"
       #    curl --location --request POST "$DD_HOST/api/v2/import-scan/" \
       #    --header "Authorization: Token $DD_API_KEY" \
       #    --form "engagement=$DD_ENGAGEMENT_ID" \
       #    --form "scan_type=Bandit" \
       #    --form "active=true" \
-      #    --form "verified=false" \
+      #    --form "verified=true" \
       #    --form "tags=cicd-aws-security-pipeline" \
       #    --form "skip_duplicates=true" \
       #    --form "title=Bandit SAST Scan - $CODEBUILD_RESOLVED_SOURCE_VERSION" \
       #    --form "branch=$CODEBUILD_WEBHOOK_HEAD_REF" \
-      #    --form "file=@${REPORT_DIR}/bandit-report.json"
-      #  fi
+      #    --form "file=@${REPORT_DIR}/${SAST_FILE_REPORT}"
+        fi
       
       # Sube reporte de OWASP Dependency-Check con curl si el archivo existe.
-      #- |
-      #  if [ -f "${REPORT_DIR}/dependency-check-report.xml" ]; then
+      - |
+        if [ -f "${REPORT_DIR}/${SCA_FILE_REPORT}" ]; then
+        echo "Subiendo reporte SCA a DefectDojo: /src/${REPORT_DIR}/${SCA_FILE_REPORT}"
       #    curl --location --request POST "$DD_HOST/api/v2/import-scan/" \
       #    --header "Authorization: Token $DD_API_KEY" \
       #    --form "engagement=$DD_ENGAGEMENT_ID" \
       #    --form "scan_type=Dependency Check" \
       #    --form "active=true" \
-      #    --form "verified=false" \
+      #    --form "verified=true" \
       #    --form "tags=cicd-aws-security-pipeline" \
       #    --form "skip_duplicates=true" \
       #    --form "title=Dependency Check SCA Scan - $CODEBUILD_RESOLVED_SOURCE_VERSION" \
       #    --form "branch=$CODEBUILD_WEBHOOK_HEAD_REF" \
-      #    --form "file=@${REPORT_DIR}/dependency-check-report.xml"
-      #  fi
+      #    --form "file=@${REPORT_DIR}/${SCA_FILE_REPORT}"
+        fi
 
 artifacts:
   files:

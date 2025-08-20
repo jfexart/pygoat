@@ -4,7 +4,7 @@ env:
   variables:
     PROJECT_NAME: "demo"
     REPORT_DIR: "security-reports"
-    SAST_FILE_REPORT: "bandit-report.sarif"
+    SAST_FILE_REPORT: "bandit-report.json"
     SCA_FILE_REPORT: "dependency-check-report.xml"
 
 phases:

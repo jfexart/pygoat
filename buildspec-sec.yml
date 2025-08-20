@@ -5,7 +5,7 @@ env:
     PROJECT_NAME: "pygoat"
     REPORT_DIR: "security-reports"
     DD_ENGAGEMENT_ID: 0
-    SAST_FILE_REPORT: "bandit-report.json"
+    SAST_FILE_REPORT: "bandit-report.sarif"
     SCA_FILE_REPORT: "dependency-check-report.xml"
 
 phases:
@@ -35,7 +35,7 @@ phases:
       # --- 1. Static Analysis (SAST) con Bandit (Docker) ---
       - echo "Ejecutando SAST con Bandit via Docker"
       # Usando una sola linea para evitar errores de sintaxis YAML
-      - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/${SAST_FILE_REPORT} || true
+      - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f sarif -o /src/${REPORT_DIR}/${SAST_FILE_REPORT} || true
       
       # --- 2. Software Composition Analysis (SCA) con OWASP Dependency-Check (Docker) ---
       # Se ejecuta OWASP Dependency-Check como usuario root user para solventar problemas de permisos
@@ -60,6 +60,15 @@ phases:
       - |
         if [ -f "${REPORT_DIR}/${SAST_FILE_REPORT}" ]; then
           echo "Subiendo reporte SAST a DefectDojo: '/src/${REPORT_DIR}/${SAST_FILE_REPORT}'"
+          curl -X POST "https://${DD_HOST}/api/v2/import-scan/" \
+            -H "Authorization: Token '${DD_API_KEY}'" \
+            -F "scan_type=SARIF" \
+            -F "test_title=SAST-Bandit" \
+            -F "file=@/src/${REPORT_DIR}/${SAST_FILE_REPORT}" \
+            -F "engagement=$ENGAMENT_ID" \
+            -F "scan_date=$(date +%Y-%m-%d)" \
+            -F "verified=true" \
+            -F "active=true"
         fi
       
       # Sube reporte de OWASP Dependency-Check con curl si el archivo existe.

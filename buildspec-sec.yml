@@ -2,9 +2,8 @@ version: 0.2
 
 env:
   variables:
-    PROJECT_NAME: "pygoat"
+    PROJECT_NAME: "demo"
     REPORT_DIR: "security-reports"
-    DD_ENGAGEMENT_ID: 0
     SAST_FILE_REPORT: "bandit-report.sarif"
     SCA_FILE_REPORT: "dependency-check-report.xml"
 
